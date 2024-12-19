@@ -93,9 +93,9 @@ func Accept(w http.ResponseWriter, r *http.Request) (*Conn, error) {
 		return nil, writeError(http.StatusBadRequest, badHandshake+"no 'Connection' header", w)
 	}
 
-	if !checkHeader(r.Header, "Upgrade", "websocket") {
-		return nil, writeError(http.StatusBadRequest, badHandshake+"no 'Upgrade' header", w)
-	}
+	// if !checkHeader(r.Header, "Upgrade", "WebSocket") {
+	// 	return nil, writeError(http.StatusBadRequest, badHandshake+"no 'Upgrade' header", w)
+	// }
 
 	if r.Method != http.MethodGet {
 		return nil, writeError(http.StatusMethodNotAllowed, badHandshake+"not GET method", w)

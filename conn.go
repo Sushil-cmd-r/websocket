@@ -212,9 +212,9 @@ func (w *msgWriter) writeFrame(payload []byte) error {
 
 func (w *msgWriter) Write(p []byte) (int, error) {
 	nn := len(p)
-
 	w.ft = w.mt
-	for len(p) > 0 {
+
+	for len(p) >= 0 {
 		n, err := w.ncopy(len(p))
 		if err != nil {
 			return 0, err
@@ -227,6 +227,9 @@ func (w *msgWriter) Write(p []byte) (int, error) {
 
 		p = p[n:]
 		w.ft = ContMessage
+		if len(p) == 0 {
+			break
+		}
 	}
 
 	w.fin = false
@@ -417,17 +420,19 @@ again:
 			buf[i] ^= maskKey[i%4]
 		}
 	}
+
+	if isControl(messageType) {
+		if err := c.handleControl(messageType, buf); err != nil {
+			return noFrame, nil, err
+		}
+		goto again
+	}
+
 	msg = append(msg, buf...)
 
 	if !final {
 		first = false
 		goto again
-	}
-
-	if isControl(messageType) {
-		if err := c.handleControl(messageType, msg); err != nil {
-			return noFrame, nil, err
-		}
 	}
 
 	return messageType, msg, nil
@@ -451,7 +456,7 @@ func (c *Conn) handleControl(mt int, payload []byte) error {
 		return &CloseError{Code: code, Text: text}
 
 	case PingMessage:
-		return c.handlePing()
+		return c.handlePing(payload)
 	case PongMessage:
 		return c.handlePong()
 	}
@@ -464,8 +469,8 @@ func (c *Conn) handleClose(code int, text string) error {
 	return nil
 }
 
-func (c *Conn) handlePing() error {
-	_ = c.WriteControl(PongMessage, nil)
+func (c *Conn) handlePing(payload []byte) error {
+	_ = c.WriteControl(PongMessage, payload)
 	return nil
 }
 
