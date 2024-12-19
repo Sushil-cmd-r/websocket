@@ -15,7 +15,11 @@ func main() {
 			return
 		}
 
-		defer conn.Close()
+		defer func() {
+			// conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, ""))
+			conn.Close()
+		}()
+
 		for {
 			mt, msg, err := conn.ReadMessage()
 			// log.Printf("got message %v, type %v\n", len(msg), mt)
@@ -24,17 +28,12 @@ func main() {
 				break
 			}
 
-			if mt >= websocket.CloseMessage && mt <= websocket.PongMessage {
-				continue
-			}
-
 			if err := conn.WriteMessage(mt, msg); err != nil {
 				log.Println("write error:", err)
 				break
 			}
 		}
 
-		// conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, ""))
 	})
 
 	log.Println("starting server...")

@@ -340,10 +340,6 @@ again:
 		return noFrame, nil, errors.New("bad MASK")
 	}
 
-	if first {
-		messageType = frameType
-	}
-
 	var errors []string
 	if rsv1 || rsv2 || rsv3 {
 		errors = append(errors, "RSV bits set")
@@ -359,6 +355,7 @@ again:
 		}
 
 	case TextMessage, BinaryMessage:
+		messageType = frameType
 		if !first {
 			errors = append(errors, "data before FIN")
 		}
@@ -421,9 +418,12 @@ again:
 		}
 	}
 
-	if isControl(messageType) {
-		if err := c.handleControl(messageType, buf); err != nil {
+	if isControl(frameType) {
+		if err := c.handleControl(frameType, buf); err != nil {
 			return noFrame, nil, err
+		}
+		if messageType != noFrame {
+			first = false
 		}
 		goto again
 	}
