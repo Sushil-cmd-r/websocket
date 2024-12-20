@@ -44,18 +44,39 @@ const (
 	CloseNormalClosure           = 1000
 	CloseGoingAway               = 1001
 	CloseProtocolError           = 1002
-	CloseUnsupportedDate         = 1003
+	CloseUnsupportedData         = 1003
 	CloseNoStatusReceived        = 1005
 	CloseAbnormalClosure         = 1006
 	CloseInvalidFramePayloadData = 1007
 	ClosePolicyViolation         = 1008
 	CloseMessageTooBig           = 1009
 	CloseMandatoryExtension      = 1010
-	CloseInteralServerErr        = 1011
+	CloseInternalServerErr       = 1011
 	CloseServiceRestart          = 1012
 	CloseTryAgainLater           = 1013
 	CloseTLSHandshake            = 1015
 )
+
+var validReceivedCloseCodes = map[int]bool{
+	CloseNormalClosure:           true,
+	CloseGoingAway:               true,
+	CloseProtocolError:           true,
+	CloseUnsupportedData:         true,
+	CloseNoStatusReceived:        false,
+	CloseAbnormalClosure:         false,
+	CloseInvalidFramePayloadData: true,
+	ClosePolicyViolation:         true,
+	CloseMessageTooBig:           true,
+	CloseMandatoryExtension:      true,
+	CloseInternalServerErr:       true,
+	CloseServiceRestart:          true,
+	CloseTryAgainLater:           true,
+	CloseTLSHandshake:            false,
+}
+
+func isValidReceivedCloseCode(code int) bool {
+	return validReceivedCloseCodes[code] || (code >= 3000 && code <= 4999)
+}
 
 type CloseError struct {
 	Code int
@@ -73,7 +94,7 @@ func (e *CloseError) Error() string {
 		s = append(s, " (going away)"...)
 	case CloseProtocolError:
 		s = append(s, " (protocol error)"...)
-	case CloseUnsupportedDate:
+	case CloseUnsupportedData:
 		s = append(s, " (unsupported data)"...)
 	case CloseNoStatusReceived:
 		s = append(s, " (no status)"...)
@@ -87,7 +108,7 @@ func (e *CloseError) Error() string {
 		s = append(s, " (message too big)"...)
 	case CloseMandatoryExtension:
 		s = append(s, " (manatory extension missing)"...)
-	case CloseInteralServerErr:
+	case CloseInternalServerErr:
 		s = append(s, " (internal server error)"...)
 	case CloseTLSHandshake:
 		s = append(s, " (TLS handshake error)"...)
@@ -449,6 +470,9 @@ func (c *Conn) handleControl(mt int, payload []byte) error {
 		text := ""
 		if len(payload) >= 2 {
 			code = int(binary.BigEndian.Uint16(payload))
+			if !isValidReceivedCloseCode(code) {
+				return c.handleProtocolError("bad close code")
+			}
 			text = string(payload[2:])
 		}
 		c.handleClose(code, text)
