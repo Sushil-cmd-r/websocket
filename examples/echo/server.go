@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -11,31 +12,23 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r)
 		if err != nil {
-			log.Println(err)
-			return
+			log.Fatal(err)
 		}
-
-		defer func() {
-			// conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, ""))
-			conn.Close()
-		}()
+		defer conn.Close()
 
 		for {
 			mt, msg, err := conn.ReadMessage()
-			// log.Printf("got message %v, type %v\n", len(msg), mt)
 			if err != nil {
-				log.Println(err)
+				fmt.Printf("read error: %v\n", err)
 				break
 			}
 
 			if err := conn.WriteMessage(mt, msg); err != nil {
-				log.Println("write error:", err)
+				fmt.Printf("write error: %v\n", err)
 				break
 			}
 		}
-
 	})
 
-	log.Println("starting server...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
